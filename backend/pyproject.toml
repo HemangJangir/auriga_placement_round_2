@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cinema-pricing"
+version = "0.1.0"
+description = "Cinema booking pricing engine and API"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.8.2",
+  "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "httpx>=0.27.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

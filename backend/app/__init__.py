@@ -1,0 +1,1 @@
+"""Cinema pricing app package."""
