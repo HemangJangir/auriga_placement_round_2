@@ -86,7 +86,7 @@ def test_sold_out_and_unknown_tier():
     config = create_demo_config()
 
     with pytest.raises(ValueError, match="unknown tier"):
-        validate_booking(config, {"tier": "Platinum", "quantity": 1, "festival_offer": False, "member": False})
+        validate_booking(config, {"tier": "Ultra", "quantity": 1, "festival_offer": False, "member": False})
 
     with pytest.raises(ValueError, match="sold out"):
         validate_booking(config, {"tier": "Recliner", "quantity": 1, "festival_offer": False, "member": False})

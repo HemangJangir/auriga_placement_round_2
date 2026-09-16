@@ -133,7 +133,7 @@ The first valid row for a case-insensitive seat class wins. Later rows with the 
 
 ## 24. Imported configuration lifetime
 
-The API uses an encapsulated in-memory `PricingConfigStore`; no database is introduced. A successful import replaces the active tiers. Existing tier names retain their demo inventory, while new imported names receive 30 demo seats so they can be exercised through the booking UI. The imported configuration lasts only until the backend process restarts.
+The API uses an encapsulated in-memory `PricingConfigStore`; no database is introduced. A successful import overlays matching default tiers, preserves their demo inventory, retains untouched defaults, and adds new imported names with 30 demo seats. The imported configuration lasts only until the backend process restarts.
 
 ## 25. Import ambiguity assumptions
 

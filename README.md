@@ -16,7 +16,7 @@ The application models a reusable cinema counter where each seat tier has a unit
 
 All money uses Decimal with ROUND_HALF_UP quantization to ensure accurate paisa-level totals.
 
-Operators can also import a messy CSV seat-class price list. The importer cleans and reports the input, then replaces the active in-memory tiers for the running process.
+Operators can also import a messy CSV seat-class price list. The importer cleans and reports the input, then overlays valid imported prices onto the active in-memory catalogue for the running process.
 
 ## Tech stack
 
@@ -162,7 +162,7 @@ Premium,-500
 Platinum,"INR 650.00"
 ```
 
-The first valid occurrence wins. A later duplicate with the same normalized price is reported as de-duplicated. A later duplicate with a different valid price is rejected as `conflicting duplicate price`. Successful imports replace all tiers; existing tier names retain their demo inventory and new names receive 30 demo seats so they can be booked in this assessment UI. Imported configuration is in-memory only and is lost when the backend process restarts. The response includes cleaned prices, accepted records, de-duplicated records, rejected records, and counts.
+The first valid occurrence wins. A later duplicate with the same normalized price is reported as de-duplicated. A later duplicate with a different valid price is rejected as `conflicting duplicate price`. Successful imports update matching default tiers while preserving their availability, retain untouched default tiers, and add new names with 30 demo seats so they can be booked in this assessment UI. Imported configuration is in-memory only and is lost when the backend process restarts. The response includes cleaned prices, accepted records, de-duplicated records, rejected records, and counts.
 
 An import containing no valid rows still returns its rejection report and does not replace the active tiers. Use `POST /api/reset-prices` or the **Reset defaults** button to restore the original demo prices.
 
@@ -199,7 +199,9 @@ Example response:
   "tiers": [
     {"name": "Silver", "price": "250.00", "available_seats": 30, "sold_out": false},
     {"name": "Gold", "price": "400.00", "available_seats": 12, "sold_out": false},
-    {"name": "Recliner", "price": "650.00", "available_seats": 0, "sold_out": true}
+    {"name": "Premium", "price": "500.00", "available_seats": 20, "sold_out": false},
+    {"name": "Platinum", "price": "650.00", "available_seats": 10, "sold_out": false},
+    {"name": "Recliner", "price": "800.00", "available_seats": 0, "sold_out": true}
   ],
   "festival_discount": "100.00",
   "member_discount_percentage": "10.00",

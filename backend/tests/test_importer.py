@@ -64,13 +64,13 @@ def test_reports_blank_negative_and_malformed_values():
 
 def test_cleaned_prices_feed_existing_pricing_engine():
     store = PricingConfigStore(create_demo_config())
-    report = import_price_csv("seat_class,price\nPlatinum,650\n")
+    report = import_price_csv("seat_class,price\nGold,450\nPlatinum,650\n")
     config = store.replace_tiers(report["cleaned_prices"])
 
-    result = calculate_booking(config, {"tier": "platinum", "quantity": 1})
+    result = calculate_booking(config, {"tier": "gold", "quantity": 1})
 
-    assert result["tier"] == "Platinum"
-    assert result["unit_price"] == Decimal("650.00")
+    assert result["tier"] == "Gold"
+    assert result["unit_price"] == Decimal("450.00")
 
 
 def test_import_endpoint_updates_config_and_prices_imported_tier():
@@ -86,11 +86,52 @@ def test_import_endpoint_updates_config_and_prices_imported_tier():
     assert any(tier["seat_class"] == "Platinum" for tier in payload["cleaned_prices"])
 
     config = client.get("/api/config").json()
-    assert config["tiers"] == [{"name": "Platinum", "price": "650.00", "available_seats": 30, "sold_out": False}]
+    assert config["tiers"] == [
+        {"name": "Silver", "price": "250.00", "available_seats": 30, "sold_out": False},
+        {"name": "Gold", "price": "400.00", "available_seats": 12, "sold_out": False},
+        {"name": "Premium", "price": "500.00", "available_seats": 20, "sold_out": False},
+        {"name": "Platinum", "price": "650.00", "available_seats": 10, "sold_out": False},
+        {"name": "Recliner", "price": "800.00", "available_seats": 0, "sold_out": True},
+    ]
 
     priced = client.post("/api/price", json={"tier": "platinum", "quantity": 1})
     assert priced.status_code == 200
     assert priced.json()["unit_price"] == "650.00"
+
+
+def test_import_updates_existing_tier_and_adds_new_tier_without_duplicates():
+    client = TestClient(app)
+    client.post("/api/reset-prices")
+    response = client.post(
+        "/api/import-prices",
+        files={"file": ("prices.csv", BytesIO(b"seat_class,price\n gold ,450\nGold,450.00\nNew Class,700\n"), "text/csv")},
+    )
+
+    assert response.status_code == 200
+    config = client.get("/api/config").json()["tiers"]
+    assert [tier["name"] for tier in config] == ["Silver", "Gold", "Premium", "Platinum", "Recliner", "New Class"]
+    assert config[1]["price"] == "450.00"
+    assert config[1]["available_seats"] == 12
+    assert len({tier["name"].casefold() for tier in config}) == len(config)
+
+
+def test_rejected_default_rows_do_not_delete_default_tiers():
+    client = TestClient(app)
+    client.post("/api/reset-prices")
+    response = client.post(
+        "/api/import-prices",
+        files={"file": ("prices.csv", BytesIO(b"seat_class,price\nPremium,-500\nRecliner,\n"), "text/csv")},
+    )
+
+    assert response.status_code == 200
+    config = client.get("/api/config").json()["tiers"]
+    assert [(tier["name"], tier["price"]) for tier in config] == [
+        ("Silver", "250.00"),
+        ("Gold", "400.00"),
+        ("Premium", "500.00"),
+        ("Platinum", "650.00"),
+        ("Recliner", "800.00"),
+    ]
 
 
 def test_import_endpoint_reports_all_rejected_rows_without_replacing_tiers():
@@ -102,8 +143,8 @@ def test_import_endpoint_reports_all_rejected_rows_without_replacing_tiers():
 
     assert response.status_code == 200
     assert response.json()["summary"] == {"imported": 0, "deduplicated": 0, "rejected": 2}
-    assert client.get("/api/config").json()["tiers"] == [
-        {"name": "Platinum", "price": "650.00", "available_seats": 30, "sold_out": False}
+    assert [tier["name"] for tier in client.get("/api/config").json()["tiers"]] == [
+        "Silver", "Gold", "Premium", "Platinum", "Recliner"
     ]
 
 
@@ -112,4 +153,4 @@ def test_reset_endpoint_restores_default_tiers():
     response = client.post("/api/reset-prices")
 
     assert response.status_code == 200
-    assert [tier["name"] for tier in response.json()["tiers"]] == ["Silver", "Gold", "Recliner"]
+    assert [tier["name"] for tier in response.json()["tiers"]] == ["Silver", "Gold", "Premium", "Platinum", "Recliner"]
